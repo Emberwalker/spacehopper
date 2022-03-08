@@ -3,6 +3,7 @@ module github.com/Emberwalker/spacehopper
 go 1.17
 
 require (
+	github.com/go-cmd/cmd v1.4.0 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/pprof v0.0.0-20220128192902-513e8ac6eea1 // indirect

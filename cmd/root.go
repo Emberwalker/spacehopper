@@ -1,18 +1,18 @@
 package cmd
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 
 	"github.com/Emberwalker/spacehopper/pkg"
 
 	"github.com/spf13/cobra"
+
+	gcmd "github.com/go-cmd/cmd"
 )
 
-var _verbose bool
+var Verbose bool
 var _codes []int32
 var _strings, _patterns []string
 var _maxAttempts int32
@@ -40,7 +40,7 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().BoolVarP(&_verbose, "verbose", "v", false, "Enable verbose logging. May interfere with piped stderr streams.")
+	rootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "Enable verbose logging. May interfere with piped stderr streams.")
 	rootCmd.Flags().Int32SliceVarP(&_codes, "codes", "c", []int32{}, "Error codes to restart the program on.")
 	rootCmd.Flags().StringSliceVarP(&_strings, "strings", "s", []string{}, "Strings to restart the program on, anywhere in the stdout stream.")
 	rootCmd.Flags().StringSliceVarP(&_patterns, "patterns", "p", []string{}, "Regex patterns to restart the program on, on any line of stdout output.")
@@ -48,71 +48,68 @@ func init() {
 }
 
 func dbg(msg string, args ...interface{}) {
-	if _verbose {
+	if Verbose {
 		fmt.Fprintf(os.Stderr, msg+"\n", args...)
 	}
 }
 
-func Run(maxAttempts int32, codes []int32, strings, patterns, args []string) (int, error) {
-	matchers := buildMatchers(codes, strings, patterns)
-
-	cmdPath, err := exec.LookPath(args[0])
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to find binary: %v\n", args[0])
-		return -1, err
-	}
+func Run(maxAttempts int32, codes []int32, strs, patterns, args []string) (int, error) {
+	matchers := buildMatchers(codes, strs, patterns)
 
 	attempts := 0
 	exitCode := -250
+
 loop:
 	for {
 		if maxAttempts != -1 && attempts >= int(maxAttempts) {
-			dbg("Out of restart attempts; tried %s times", attempts)
+			dbg("Out of restart attempts; tried %v times", attempts)
 			exitCode = -249
 			break loop
 		}
 		attempts += 1
+		dbg("Attempt %v", attempts)
 
-		cmd, stdout, stderr := spawn(cmdPath, args[1:])
-		exited := make(chan struct{})
-		restart := make(chan struct{})
-		go monitorStream(restart, stdout, matchers)
-		go monitorStream(restart, stderr, matchers)
-		err = cmd.Start()
-		if err != nil {
-			return exitCode, err
+		opts := gcmd.Options{
+			Buffered:  false,
+			Streaming: true,
 		}
+		cmd := gcmd.NewCmdOptions(opts, args[0], args[1:]...)
 
-		go func() {
-			waitErr := cmd.Wait()
-			if _, isExitErr := waitErr.(*exec.ExitError); waitErr != nil && !isExitErr {
-				panic(err)
-			}
-			close(exited)
-		}()
+		restart := make(chan struct{})
+		stdoutDone := make(chan struct{})
+		stderrDone := make(chan struct{})
 
-	sel:
+		go monitorStream(cmd.Stdout, os.Stdout, restart, stdoutDone, matchers)
+		go monitorStream(cmd.Stderr, os.Stderr, restart, stderrDone, matchers)
+
+		statusChan := cmd.StartWithStdin(os.Stdin)
+
 		select {
 		case <-restart:
-			cmd.Process.Kill()
-			cmd.Wait()
-			exitCode = -250
-			break sel
-		case <-exited:
-			cmd.Wait()
-			exitCode = cmd.ProcessState.ExitCode()
-			codeMatched := false
+			cmd.Stop()
+			<-statusChan
+			close(restart)
+			continue loop
+		case <-statusChan:
+			// Give log matchers a chance to wrap up and check restart requests
+			<-stdoutDone
+			<-stderrDone
+			select {
+			case <-restart:
+				continue loop
+			default:
+				// Pass
+			}
+
+			close(restart)
+			exitCode = cmd.Status().Exit
 			for _, matcher := range matchers {
 				if matcher.MatchExitCode(exitCode) {
-					codeMatched = true
+					continue loop
 				}
-			}
-			if codeMatched {
-				break sel
 			}
 			break loop
 		}
-		close(restart)
 	}
 
 	return exitCode, nil
@@ -132,34 +129,21 @@ func buildMatchers(codes []int32, strings, patterns []string) []pkg.Matcher {
 	return matchers
 }
 
-func spawn(cmdPath string, args []string) (cmd exec.Cmd, stdout io.ReadCloser, stderr io.ReadCloser) {
-	cmd = *exec.Command(cmdPath, args...)
-	cmd.Stdin = os.Stdin
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		panic(err)
-	}
-	io.TeeReader(stdout, os.Stdout)
-
-	stderr, err = cmd.StderrPipe()
-	if err != nil {
-		panic(err)
-	}
-	io.TeeReader(stderr, os.Stderr)
-
-	return
-}
-
-func monitorStream(channel chan struct{}, r io.Reader, matchers []pkg.Matcher) {
-	scan := bufio.NewScanner(r)
-	for scan.Scan() {
-		ln := scan.Text()
-		for _, matcher := range matchers {
-			if matcher.MatchLine(ln) {
-				channel <- struct{}{}
-				return
+func monitorStream(stream chan string, osStream io.Writer, restart, done chan struct{}, matchers []pkg.Matcher) {
+root:
+	for {
+		s, more := <-stream
+		if more {
+			fmt.Sprintln(s, osStream)
+			for _, matcher := range matchers {
+				if matcher.MatchLine(s) {
+					restart <- struct{}{}
+					break root
+				}
 			}
+		} else {
+			close(done)
+			break root
 		}
 	}
 }
