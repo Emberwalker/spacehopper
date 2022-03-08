@@ -18,7 +18,7 @@ var _ = Describe("Cmd/Root", func() {
 	It("should not error if a retry based on code is needed and succeeds", func() {
 		os.Remove("/tmp/test1")
 		code, err := cmd.Run(2, []int32{1}, []string{}, []string{}, []string{
-			"sh",
+			"/bin/sh",
 			"-c",
 			`[[ -f /tmp/test1 ]] && exit 0 || touch /tmp/test1 && exit 1`,
 		})
@@ -28,7 +28,7 @@ var _ = Describe("Cmd/Root", func() {
 	It("should not error if a retry based on string is needed and succeeds", func() {
 		os.Remove("/tmp/test2")
 		code, err := cmd.Run(2, []int32{}, []string{"FAIL"}, []string{}, []string{
-			"sh",
+			"/bin/sh",
 			"-c",
 			`[[ -f /tmp/test2 ]] && exit 0 || touch /tmp/test2 && echo "FAIL" && exit 1`,
 		})
@@ -38,7 +38,7 @@ var _ = Describe("Cmd/Root", func() {
 	It("should not error if a retry based on regex is needed and succeeds", func() {
 		os.Remove("/tmp/test2")
 		code, err := cmd.Run(2, []int32{}, []string{}, []string{"F.I."}, []string{
-			"sh",
+			"/bin/sh",
 			"-c",
 			`[[ -f /tmp/test2 ]] && exit 0 || touch /tmp/test2 && echo "FAIL" && exit 1`,
 		})
@@ -48,7 +48,7 @@ var _ = Describe("Cmd/Root", func() {
 	It("should error if a out of retries", func() {
 		os.Remove("/tmp/test2")
 		code, err := cmd.Run(2, []int32{}, []string{}, []string{"F.I."}, []string{
-			"sh",
+			"/bin/sh",
 			"-c",
 			`exit 1`,
 		})
