@@ -12,6 +12,7 @@ import (
 	gcmd "github.com/go-cmd/cmd"
 )
 
+var Version string = "devel"
 var Verbose bool
 var _codes []int32
 var _strings, _patterns []string
@@ -22,7 +23,8 @@ var rootCmd = &cobra.Command{
 	Short: "Reboot annoying CLI programs with irritating failure modes.",
 	Long: `Spacehopper restarts commandline programs based on specific triggers, but otherwise passes through
 	all standard input, output and exit codes verbatim.`,
-	Args: cobra.MinimumNArgs(1),
+	Args:    cobra.MinimumNArgs(1),
+	Version: Version,
 	Run: func(_ *cobra.Command, args []string) {
 		code, err := Run(_maxAttempts, _codes, _strings, _patterns, args)
 		if err != nil {
