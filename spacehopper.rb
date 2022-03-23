@@ -5,42 +5,42 @@
 class Spacehopper < Formula
   desc "Reboot annoying CLI programs with irritating failure modes."
   homepage "https://github.com/Emberwalker/spacehopper"
-  version "0.0.3"
+  version "0.0.4"
 
   on_macos do
-    if Hardware::CPU.intel?
-      url "https://github.com/Emberwalker/spacehopper/releases/download/v0.0.3/spacehopper_0.0.3_darwin_amd64"
-      sha256 "289e158dcf328072661ea131fcc0a9cac9d5894d7b9ff9ad8af2214fd6c37ef5"
+    if Hardware::CPU.arm?
+      url "https://github.com/Emberwalker/spacehopper/releases/download/v0.0.4/spacehopper_0.0.4_darwin_arm64"
+      sha256 "2da9431a88239911d9bb8449ec62954d9aa0eb5645ff4de62bef67bab5a32a60"
 
       def install
-        bin.install "spacehopper_0.0.3_darwin_amd64" => "spacehopper"
+        bin.install "spacehopper_0.0.4_darwin_arm64" => "spacehopper"
       end
     end
-    if Hardware::CPU.arm?
-      url "https://github.com/Emberwalker/spacehopper/releases/download/v0.0.3/spacehopper_0.0.3_darwin_arm64"
-      sha256 "3aa2545b67f358e549113db825d07ef640ab48454eb841494e6145737576a4ec"
+    if Hardware::CPU.intel?
+      url "https://github.com/Emberwalker/spacehopper/releases/download/v0.0.4/spacehopper_0.0.4_darwin_amd64"
+      sha256 "cac9888c3b99388d5cc45d47fd3b63e1bb32049ef6e32d84a489c0423e06f5d0"
 
       def install
-        bin.install "spacehopper_0.0.3_darwin_arm64" => "spacehopper"
+        bin.install "spacehopper_0.0.4_darwin_amd64" => "spacehopper"
       end
     end
   end
 
   on_linux do
-    if Hardware::CPU.intel?
-      url "https://github.com/Emberwalker/spacehopper/releases/download/v0.0.3/spacehopper_0.0.3_linux_amd64"
-      sha256 "d444476a31a471855e6e55977b9ee34cf06ce7085799da9e17915577db526f0e"
+    if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
+      url "https://github.com/Emberwalker/spacehopper/releases/download/v0.0.4/spacehopper_0.0.4_linux_arm64"
+      sha256 "23e68453fc2950e32041d330292a11a74d19742a5ceaaa3f03fef834325283f1"
 
       def install
-        bin.install "spacehopper_0.0.3_linux_amd64" => "spacehopper"
+        bin.install "spacehopper_0.0.4_linux_arm64" => "spacehopper"
       end
     end
-    if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/Emberwalker/spacehopper/releases/download/v0.0.3/spacehopper_0.0.3_linux_arm64"
-      sha256 "9ff12aa1a6598dbdd0a837b08fd7610628cfb35e9b12bcbd77035dad78d7d738"
+    if Hardware::CPU.intel?
+      url "https://github.com/Emberwalker/spacehopper/releases/download/v0.0.4/spacehopper_0.0.4_linux_amd64"
+      sha256 "ac1e12854b6aa0bd88f0e6128884099db17d00b9dbcadbd5a6295429d46254cf"
 
       def install
-        bin.install "spacehopper_0.0.3_linux_arm64" => "spacehopper"
+        bin.install "spacehopper_0.0.4_linux_amd64" => "spacehopper"
       end
     end
   end
