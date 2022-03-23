@@ -136,7 +136,7 @@ root:
 	for {
 		s, more := <-stream
 		if more {
-			fmt.Sprintln(s, osStream)
+			fmt.Fprintln(osStream, s)
 			for _, matcher := range matchers {
 				if matcher.MatchLine(s) {
 					restart <- struct{}{}
