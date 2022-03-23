@@ -77,7 +77,7 @@ loop:
 		}
 		cmd := gcmd.NewCmdOptions(opts, args[0], args[1:]...)
 
-		restart := make(chan struct{})
+		restart := make(chan struct{}, 2) // Buffer this to prevent a deadlock condition
 		stdoutDone := make(chan struct{})
 		stderrDone := make(chan struct{})
 
@@ -140,6 +140,7 @@ root:
 			for _, matcher := range matchers {
 				if matcher.MatchLine(s) {
 					restart <- struct{}{}
+					close(done)
 					break root
 				}
 			}
