@@ -57,6 +57,7 @@ func dbg(msg string, args ...interface{}) {
 
 func Run(maxAttempts int32, codes []int32, strs, patterns, args []string) (int, error) {
 	matchers := buildMatchers(codes, strs, patterns)
+	dbg("%v matchers loaded.", len(matchers))
 
 	attempts := 0
 	exitCode := -250
@@ -88,6 +89,7 @@ loop:
 
 		select {
 		case <-restart:
+			dbg("Restart triggered by log stream")
 			cmd.Stop()
 			<-statusChan
 			close(restart)
@@ -96,8 +98,10 @@ loop:
 			// Give log matchers a chance to wrap up and check restart requests
 			<-stdoutDone
 			<-stderrDone
+			dbg("Program exited with status %v", cmd.Status().Exit)
 			select {
 			case <-restart:
+				dbg("Post-exit restart triggered by log stream catch-up")
 				continue loop
 			default:
 				// Pass
@@ -107,6 +111,7 @@ loop:
 			exitCode = cmd.Status().Exit
 			for _, matcher := range matchers {
 				if matcher.MatchExitCode(exitCode) {
+					dbg("Post-exit restart triggered by exit code match")
 					continue loop
 				}
 			}
@@ -120,12 +125,15 @@ loop:
 func buildMatchers(codes []int32, strings, patterns []string) []pkg.Matcher {
 	var matchers = []pkg.Matcher{}
 	for _, c := range codes {
+		dbg("Adding code matcher: %v", c)
 		matchers = append(matchers, pkg.CompileCodeMatcher(int(c)))
 	}
 	for _, str := range strings {
+		dbg("Adding string matcher: %v", str)
 		matchers = append(matchers, pkg.CompileLogMatcher(str))
 	}
 	for _, str := range patterns {
+		dbg("Adding regex matcher: %v", str)
 		matchers = append(matchers, pkg.CompileLogPatternMatcher(str))
 	}
 	return matchers
@@ -139,6 +147,7 @@ root:
 			fmt.Fprintln(osStream, s)
 			for _, matcher := range matchers {
 				if matcher.MatchLine(s) {
+					dbg("Stream watcher %v matched: %v", matcher, s)
 					restart <- struct{}{}
 					close(done)
 					break root

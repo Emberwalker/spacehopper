@@ -20,6 +20,17 @@ var _ = Describe("Matchers", func() {
 		})
 	})
 
+	Context("Plain log matchers corner cases", func() {
+		It("should not match something that looks like a catch-all regex", func() {
+			var matcher = pkg.CompileLogMatcher("[Test]")
+			Expect(matcher.MatchLine("Best")).To(Equal(false))
+		})
+		It("should match something that looks like a catch-all regex", func() {
+			var matcher = pkg.CompileLogMatcher("[Test]")
+			Expect(matcher.MatchLine("Something [Test] blah")).To(Equal(true))
+		})
+	})
+
 	Context("Pattern log matchers", func() {
 		var matcher = pkg.CompileLogPatternMatcher("[a|b]")
 		It("should match a matching log line", func() {
